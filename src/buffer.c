@@ -212,6 +212,11 @@ bset_display_table (struct buffer *b, Lisp_Object val)
   b->display_table_ = val;
 }
 static void
+bset_extra_line_height (struct buffer *b, Lisp_Object val)
+{
+  b->extra_line_height_ = val;
+}
+static void
 bset_extra_line_spacing (struct buffer *b, Lisp_Object val)
 {
   b->extra_line_spacing_ = val;
@@ -944,6 +949,7 @@ reset_buffer (register struct buffer *b)
   bset_enable_multibyte_characters
     (b, BVAR (&buffer_defaults, enable_multibyte_characters));
   bset_cursor_type (b, BVAR (&buffer_defaults, cursor_type));
+  bset_extra_line_height (b, BVAR (&buffer_defaults, extra_line_height));
   bset_extra_line_spacing (b, BVAR (&buffer_defaults, extra_line_spacing));
 
   b->display_error_modiff = 0;
@@ -5149,6 +5155,7 @@ init_buffer_once (void)
   XSETFASTINT (BVAR (&buffer_local_flags, scroll_down_aggressively), idx); ++idx;
   XSETFASTINT (BVAR (&buffer_local_flags, header_line_format), idx); ++idx;
   XSETFASTINT (BVAR (&buffer_local_flags, cursor_type), idx); ++idx;
+  XSETFASTINT (BVAR (&buffer_local_flags, extra_line_height), idx); ++idx;
   XSETFASTINT (BVAR (&buffer_local_flags, extra_line_spacing), idx); ++idx;
   XSETFASTINT (BVAR (&buffer_local_flags, cursor_in_non_selected_windows), idx); ++idx;
 
@@ -5213,6 +5220,7 @@ init_buffer_once (void)
   bset_bidi_paragraph_start_re (&buffer_defaults, Qnil);
   bset_bidi_paragraph_separate_re (&buffer_defaults, Qnil);
   bset_cursor_type (&buffer_defaults, Qt);
+  bset_extra_line_height (&buffer_defaults, Qnil);
   bset_extra_line_spacing (&buffer_defaults, Qnil);
   bset_cursor_in_non_selected_windows (&buffer_defaults, Qt);
 
@@ -6206,6 +6214,14 @@ WIDTH and HEIGHT can't exceed the frame's canonical character size.
 When the buffer is displayed in a non-selected window, the
 cursor's appearance is instead controlled by the variable
 `cursor-in-non-selected-windows'.  */);
+
+  DEFVAR_PER_BUFFER ("line-height",
+		     &BVAR (current_buffer, extra_line_height), Qnumberp,
+		     doc: /* Additional space to put between lines when displaying a buffer.
+The space is measured in pixels, and put above lines on graphic displays,
+see `display-graphic-p'.
+If value is a floating point number, it specifies the spacing relative
+to the default frame line height.  A value of nil means add no extra space.  */);
 
   DEFVAR_PER_BUFFER ("line-spacing",
 		     &BVAR (current_buffer, extra_line_spacing), Qnumberp,

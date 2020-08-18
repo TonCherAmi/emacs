@@ -1295,17 +1295,36 @@ default_line_pixel_height (struct window *w)
   if (!FRAME_INITIAL_P (f) && BUFFERP (w->contents))
     {
       struct buffer *b = XBUFFER (w->contents);
-      Lisp_Object val = BVAR (b, extra_line_spacing);
 
-      if (NILP (val))
-	val = BVAR (&buffer_defaults, extra_line_spacing);
-      if (!NILP (val))
+      Lisp_Object elh = BVAR (b, extra_line_height);
+      Lisp_Object els = BVAR (b, extra_line_spacing);
+
+      if (NILP (elh))
+	elh = BVAR (&buffer_defaults, extra_line_height);
+
+      if (!NILP (elh))
 	{
-	  if (RANGED_INTEGERP (0, val, INT_MAX))
-	    height += XFASTINT (val);
-	  else if (FLOATP (val))
+	  if (RANGED_INTEGERP (0, elh, INT_MAX))
+	    height += XFASTINT (elh);
+	  else if (FLOATP (elh))
 	    {
-	      int addon = XFLOAT_DATA (val) * height + 0.5;
+	      int addon = XFLOAT_DATA (elh) * height + 0.5;
+
+	      if (addon >= 0)
+		height += addon;
+	    }
+	}
+
+      if (NILP (els))
+	els = BVAR (&buffer_defaults, extra_line_spacing);
+
+      if (!NILP (els))
+	{
+	  if (RANGED_INTEGERP (0, els, INT_MAX))
+	    height += XFASTINT (els);
+	  else if (FLOATP (els))
+	    {
+	      int addon = XFLOAT_DATA (els) * height + 0.5;
 
 	      if (addon >= 0)
 		height += addon;
@@ -2900,6 +2919,12 @@ init_iterator (struct it *it, struct window *w,
   if (base_face_id == DEFAULT_FACE_ID
       && FRAME_WINDOW_P (it->f))
     {
+      if (NATNUMP (BVAR (current_buffer, extra_line_height)))
+	it->extra_line_height = XFASTINT (BVAR (current_buffer, extra_line_height));
+      else if (FLOATP (BVAR (current_buffer, extra_line_height)))
+	it->extra_line_height = (XFLOAT_DATA (BVAR (current_buffer, extra_line_height))
+				  * FRAME_LINE_HEIGHT (it->f));
+
       if (NATNUMP (BVAR (current_buffer, extra_line_spacing)))
 	it->extra_line_spacing = XFASTINT (BVAR (current_buffer, extra_line_spacing));
       else if (FLOATP (BVAR (current_buffer, extra_line_spacing)))
@@ -11348,7 +11373,6 @@ resize_mini_window (struct window *w, bool exact_p)
 	    height = it.current_y + last_height;
 	  else
 	    height = it.current_y + it.max_ascent + it.max_descent;
-	  height -= min (it.extra_line_spacing, it.max_extra_line_spacing);
 	}
 
       /* Compute a suitable window start.  */
@@ -12733,6 +12757,7 @@ display_tool_bar_line (struct it *it, int height)
       row->height = row->phys_height = it->last_visible_y - row->y;
       row->visible_height = row->height;
       row->ascent = row->phys_ascent = 0;
+      row->extra_line_height = 0;
       row->extra_line_spacing = 0;
     }
 
@@ -18719,6 +18744,11 @@ try_window_id (struct window *w)
       && NILP (BVAR (XBUFFER (w->contents), bidi_paragraph_direction)))
     GIVE_UP (22);
 
+  /* Give up if the buffer has line-height set, as Lisp-level changes
+     to that variable require thorough redisplay.  */
+  if (!NILP (BVAR (XBUFFER (w->contents), extra_line_height)))
+    GIVE_UP (23);
+
   /* Give up if the buffer has line-spacing set, as Lisp-level changes
      to that variable require thorough redisplay.  */
   if (!NILP (BVAR (XBUFFER (w->contents), extra_line_spacing)))
@@ -20017,6 +20047,7 @@ compute_line_metrics (struct it *it)
 	  row->height = it->max_ascent + it->max_descent;
 	  row->phys_ascent = it->max_phys_ascent;
 	  row->phys_height = it->max_phys_ascent + it->max_phys_descent;
+	  row->extra_line_height = it->max_extra_line_height;
 	  row->extra_line_spacing = it->max_extra_line_spacing;
 	}
 
@@ -20061,6 +20092,7 @@ compute_line_metrics (struct it *it)
 	row->pixel_width -= it->truncation_pixel_width;
       row->ascent = row->phys_ascent = 0;
       row->height = row->phys_height = row->visible_height = 1;
+      row->extra_line_height = 0;
       row->extra_line_spacing = 0;
     }
 
@@ -20147,7 +20179,9 @@ append_space_for_newline (struct it *it, bool default_face_p)
 	  if (n == 0)
 	    {
 	      Lisp_Object height, total_height;
+	      int extra_line_height = it->extra_line_height;
 	      int extra_line_spacing = it->extra_line_spacing;
+
 	      int boff = font->baseline_offset;
 
 	      if (font->vertical_centering)
@@ -20176,7 +20210,10 @@ append_space_for_newline (struct it *it, bool default_face_p)
 		  boff = it->override_boff;
 		}
 	      if (EQ (height, Qt))
-		extra_line_spacing = 0;
+		{
+		  extra_line_height = 0;
+		  extra_line_spacing = 0;
+		}
 	      else
 		{
 		  Lisp_Object spacing;
@@ -20198,14 +20235,26 @@ append_space_for_newline (struct it *it, bool default_face_p)
 		    }
 		  if (INTEGERP (spacing))
 		    {
+		      extra_line_height = XINT (spacing);
 		      extra_line_spacing = XINT (spacing);
 		      if (!NILP (total_height))
-			extra_line_spacing -= (it->phys_ascent + it->phys_descent);
+			{
+			  extra_line_height -= (it->phys_ascent + it->phys_descent);
+			  extra_line_spacing -= (it->phys_ascent + it->phys_descent);
+			}
 		    }
+		}
+	      if (extra_line_height > 0)
+		{
+		  it->ascent += extra_line_height;
+
+		  if (extra_line_height > it->max_extra_line_height)
+		    it->max_extra_line_height = extra_line_height;
 		}
 	      if (extra_line_spacing > 0)
 		{
 		  it->descent += extra_line_spacing;
+
 		  if (extra_line_spacing > it->max_extra_line_spacing)
 		    it->max_extra_line_spacing = extra_line_spacing;
 		}
@@ -21406,6 +21455,7 @@ display_line (struct it *it, int cursor_vpos)
   int wrap_row_used = -1;
   int wrap_row_ascent UNINIT, wrap_row_height UNINIT;
   int wrap_row_phys_ascent UNINIT, wrap_row_phys_height UNINIT;
+  int wrap_row_extra_line_height UNINIT;
   int wrap_row_extra_line_spacing UNINIT;
   ptrdiff_t wrap_row_min_pos UNINIT, wrap_row_min_bpos UNINIT;
   ptrdiff_t wrap_row_max_pos UNINIT, wrap_row_max_bpos UNINIT;
@@ -21533,6 +21583,7 @@ display_line (struct it *it, int cursor_vpos)
   row->height = it->max_ascent + it->max_descent;
   row->phys_ascent = it->max_phys_ascent;
   row->phys_height = it->max_phys_ascent + it->max_phys_descent;
+  row->extra_line_height = it->max_extra_line_height;
   row->extra_line_spacing = it->max_extra_line_spacing;
 
 /* Utility macro to record max and min buffer positions seen until now.  */
@@ -21644,6 +21695,7 @@ display_line (struct it *it, int cursor_vpos)
 		  wrap_row_height = row->height;
 		  wrap_row_phys_ascent = row->phys_ascent;
 		  wrap_row_phys_height = row->phys_height;
+		  wrap_row_extra_line_height = row->extra_line_height;
 		  wrap_row_extra_line_spacing = row->extra_line_spacing;
 		  wrap_row_min_pos = min_pos;
 		  wrap_row_min_bpos = min_bpos;
@@ -21665,6 +21717,8 @@ display_line (struct it *it, int cursor_vpos)
 	  row->phys_ascent = max (row->phys_ascent, it->max_phys_ascent);
 	  row->phys_height = max (row->phys_height,
 				  it->max_phys_ascent + it->max_phys_descent);
+	  row->extra_line_height = max (row->extra_line_height,
+					 it->max_extra_line_height);
 	  row->extra_line_spacing = max (row->extra_line_spacing,
 					 it->max_extra_line_spacing);
 	  set_iterator_to_next (it, true);
@@ -21707,6 +21761,8 @@ display_line (struct it *it, int cursor_vpos)
 	  row->phys_ascent = max (row->phys_ascent, it->max_phys_ascent);
 	  row->phys_height = max (row->phys_height,
 				  it->max_phys_ascent + it->max_phys_descent);
+	  row->extra_line_height = max (row->extra_line_height,
+					 it->max_extra_line_height);
 	  row->extra_line_spacing = max (row->extra_line_spacing,
 					 it->max_extra_line_spacing);
 	  if (it->current_x - it->pixel_width < it->first_visible_x
@@ -21870,6 +21926,7 @@ display_line (struct it *it, int cursor_vpos)
 		      row->height = wrap_row_height;
 		      row->phys_ascent = wrap_row_phys_ascent;
 		      row->phys_height = wrap_row_phys_height;
+		      row->extra_line_height = wrap_row_extra_line_height;
 		      row->extra_line_spacing = wrap_row_extra_line_spacing;
 		      min_pos = wrap_row_min_pos;
 		      min_bpos = wrap_row_min_bpos;
@@ -22000,6 +22057,8 @@ display_line (struct it *it, int cursor_vpos)
 	  row->phys_ascent = max (row->phys_ascent, it->max_phys_ascent);
 	  row->phys_height = max (row->phys_height,
 				  it->max_phys_ascent + it->max_phys_descent);
+	  row->extra_line_height = max (row->extra_line_height,
+					 it->max_extra_line_height);
 	  row->extra_line_spacing = max (row->extra_line_spacing,
 					 it->max_extra_line_spacing);
 
@@ -25104,6 +25163,7 @@ display_string (const char *string, Lisp_Object lisp_string, Lisp_Object face_st
   row->height = it->max_ascent + it->max_descent;
   row->phys_ascent = it->max_phys_ascent;
   row->phys_height = it->max_phys_ascent + it->max_phys_descent;
+  row->extra_line_height = it->max_extra_line_height;
   row->extra_line_spacing = it->max_extra_line_spacing;
 
   if (STRINGP (it->string))
@@ -25175,6 +25235,8 @@ display_string (const char *string, Lisp_Object lisp_string, Lisp_Object face_st
 	  row->phys_ascent = max (row->phys_ascent, it->max_phys_ascent);
 	  row->phys_height = max (row->phys_height,
 				  it->max_phys_ascent + it->max_phys_descent);
+	  row->extra_line_height = max (row->extra_line_height,
+					 it->max_extra_line_height);
 	  row->extra_line_spacing = max (row->extra_line_spacing,
 					 it->max_extra_line_spacing);
 	  x += glyph->pixel_width;
@@ -26719,7 +26781,6 @@ compute_overhangs_and_x (struct glyph_string *s, int x, bool backward_p)
 
    Value is the x-position reached, relative to AREA of W.  */
 
-static int
 draw_glyphs (struct window *w, int x, struct glyph_row *row,
 	     enum glyph_row_area area, ptrdiff_t start, ptrdiff_t end,
 	     enum draw_glyphs_face hl, int overlaps)
@@ -28170,6 +28231,7 @@ produce_glyphless_glyph (struct it *it, bool for_no_font, Lisp_Object acronym)
 void
 x_produce_glyphs (struct it *it)
 {
+  int extra_line_height = it->extra_line_height;
   int extra_line_spacing = it->extra_line_spacing;
 
   it->glyph_not_available_p = false;
@@ -28205,8 +28267,8 @@ x_produce_glyphs (struct it *it)
 
  	  if (it->override_ascent >= 0)
  	    {
- 	      it->ascent = it->override_ascent;
- 	      it->descent = it->override_descent;
+ 	      it->ascent = it->override_ascent + 10;
+ 	      it->descent = it->override_descent + 10;
  	      boff = it->override_boff;
  	    }
  	  else
@@ -28267,6 +28329,7 @@ x_produce_glyphs (struct it *it)
  		}
  	      it->phys_ascent = min (it->phys_ascent, it->ascent);
  	      it->phys_descent = min (it->phys_descent, it->descent);
+ 	      extra_line_height = 0;
  	      extra_line_spacing = 0;
   	    }
 
@@ -28400,6 +28463,8 @@ x_produce_glyphs (struct it *it)
 	      it->phys_ascent = min (it->phys_ascent, it->ascent);
 	      it->phys_descent = min (it->phys_descent, it->descent);
 	      it->constrain_row_ascent_descent_p = true;
+
+	      extra_line_height = 0;
 	      extra_line_spacing = 0;
 	    }
 	  else
@@ -28917,9 +28982,18 @@ x_produce_glyphs (struct it *it)
   if (it->area == TEXT_AREA)
     it->current_x += it->pixel_width;
 
+  if (extra_line_height > 0)
+    {
+      it->ascent += extra_line_height;
+
+      if (extra_line_height > it->max_extra_line_height)
+	it->max_extra_line_height = extra_line_height;
+    }
+
   if (extra_line_spacing > 0)
     {
       it->descent += extra_line_spacing;
+
       if (extra_line_spacing > it->max_extra_line_spacing)
 	it->max_extra_line_spacing = extra_line_spacing;
     }

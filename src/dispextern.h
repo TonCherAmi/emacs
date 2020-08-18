@@ -862,6 +862,9 @@ struct glyph_row
      frames.  It may be < 0 in case of completely invisible rows.  */
   int visible_height;
 
+  /* Extra line height added before this row. */
+  int extra_line_height;
+
   /* Extra line spacing added after this row.  Do not consider this
      in last row when checking if row is fully visible.  */
   int extra_line_spacing;
@@ -2564,6 +2567,13 @@ struct it
   /* Last visible y-position + 1 in the display area without a mode
      line, if the window has one.  */
   int last_visible_y;
+
+  /* Default amount of additional space in pixels between lines (for
+     window systems only.)  */
+  int extra_line_height;
+
+  /* Max extra line height added in this row.  */
+  int max_extra_line_height;
 
   /* Default amount of additional space in pixels between lines (for
      window systems only.)  */

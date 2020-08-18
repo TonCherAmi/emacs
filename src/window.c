@@ -5988,6 +5988,7 @@ and redisplay normally--don't erase and redraw the frame.  */)
 	  struct it it;
 	  struct text_pos pt;
 	  ptrdiff_t nlines = min (PTRDIFF_MAX, -iarg);
+	  int extra_line_height;
 	  int extra_line_spacing;
 	  int h = window_box_height (w);
 	  int ht = window_internal_height (w);
@@ -6019,6 +6020,7 @@ and redisplay normally--don't erase and redraw the frame.  */)
 	    }
 
 	  /* Don't reserve space for extra line spacing of last line.  */
+	  extra_line_height = it.max_extra_line_height;
 	  extra_line_spacing = it.max_extra_line_spacing;
 
 	  /* If we can't move down NLINES lines because we hit
@@ -6026,8 +6028,9 @@ and redisplay normally--don't erase and redraw the frame.  */)
 	  if (it.vpos < nlines)
 	    {
 	      nlines -= it.vpos;
+	      extra_line_height = it.extra_line_height;
 	      extra_line_spacing = it.extra_line_spacing;
-	      h -= nlines * (FRAME_LINE_HEIGHT (it.f) + extra_line_spacing);
+	      h -= nlines * ((FRAME_LINE_HEIGHT (it.f) + extra_line_height) + (FRAME_LINE_HEIGHT (it.f) + extra_line_spacing));
 	    }
 	  if (h <= 0)
 	    {
@@ -6047,6 +6050,7 @@ and redisplay normally--don't erase and redraw the frame.  */)
 	     But ignore extra line spacing on last line, as it is not
 	     considered to be part of the visible height of the line.
 	  */
+	  h += extra_line_height;
 	  h += extra_line_spacing;
 	  while (-it.current_y > h)
 	    move_it_by_lines (&it, 1);

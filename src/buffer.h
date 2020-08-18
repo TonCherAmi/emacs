@@ -754,6 +754,10 @@ struct buffer
      per-buffer variable `cursor-type'.  */
   Lisp_Object cursor_type_;
 
+  /* An integer > 0 means put that number of pixels above text lines
+     in the display of this buffer.  */
+  Lisp_Object extra_line_height_;
+
   /* An integer > 0 means put that number of pixels below text lines
      in the display of this buffer.  */
   Lisp_Object extra_line_spacing_;

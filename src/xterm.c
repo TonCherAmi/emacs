@@ -3791,14 +3791,14 @@ x_draw_glyph_string (struct glyph_string *s)
           unsigned long dy = (glyph_height - h) / 2;
 
 	  if (s->face->strike_through_color_defaulted_p)
-	    x_fill_rectangle (s->f, s->gc, s->x, glyph_y + dy,
+	    x_fill_rectangle (s->f, s->gc, s->x, glyph_y + s->height / 2,
 			    s->width, h);
 	  else
 	    {
 	      XGCValues xgcv;
 	      XGetGCValues (s->display, s->gc, GCForeground, &xgcv);
 	      XSetForeground (s->display, s->gc, s->face->strike_through_color);
-	      x_fill_rectangle (s->f, s->gc, s->x, glyph_y + dy,
+	      x_fill_rectangle (s->f, s->gc, s->x, glyph_y + s->height / 2,
 			      s->width, h);
 	      XSetForeground (s->display, s->gc, xgcv.foreground);
 	    }

@@ -4323,7 +4323,7 @@ frame_unhighlight (struct frame *f)
   /* Same as above for XSetWindowBorder (bug#9310).  */
   x_catch_errors (FRAME_X_DISPLAY (f));
   XSetWindowBorderPixmap (FRAME_X_DISPLAY (f), FRAME_X_WINDOW (f),
-			  f->output_data.x->border_tile);
+			  f->output_data.x->border_pixel);
   x_uncatch_errors ();
   unblock_input ();
   x_update_cursor (f, true);

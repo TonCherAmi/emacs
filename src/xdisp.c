@@ -4141,9 +4141,9 @@ handle_face_prop (struct it *it)
 	     but Emacs always did that since v21.1, so changing that
 	     might be a big deal.  */
 	  base_face_id = it->string_from_prefix_prop_p
-	    ? (!NILP (Vface_remapping_alist)
+	    ? DEFAULT_FACE_ID /* (!NILP (Vface_remapping_alist)
 	       ? lookup_basic_face (it->f, DEFAULT_FACE_ID)
-	       : DEFAULT_FACE_ID)
+	       : DEFAULT_FACE_ID) */
 	    : underlying_face_id (it);
 	}
 
@@ -26441,6 +26441,10 @@ set_glyph_string_background_width (struct glyph_string *s, int start, int last_x
 	  || s->hl == DRAW_MOUSE_FACE))
     s->extends_to_end_of_line_p = true;
 
+   if (s->prev && s->prev->face->underline_type == FACE_UNDER_EXTENDED_LINE)
+     {
+       s->extends_to_end_of_line_p = true;
+     }
   /* If S extends its face to the end of the line, set its
      background_width to the distance to the right edge of the drawing
      area.  */
@@ -26448,6 +26452,15 @@ set_glyph_string_background_width (struct glyph_string *s, int start, int last_x
     s->background_width = last_x - s->x + 1;
   else
     s->background_width = s->width;
+}
+
+/* Set extended underline width of glyph string S. LAST_X is the right-most x-position + 1
+   in the drawing area.  */
+
+static void
+set_glyph_string_under_extended_line_width (struct glyph_string *s, int last_x)
+{
+  s->under_extended_line_width = last_x - s->x + 1;
 }
 
 
@@ -26462,6 +26475,12 @@ glyph_string_containing_background_width (struct glyph_string *s)
       s = s->prev;
 
   return s;
+}
+
+static struct glyph_string *
+glyph_string_containing_undex_extended_line (struct glyph_string *s)
+{
+
 }
 
 
@@ -26825,6 +26844,14 @@ draw_glyphs (struct window *w, int x, struct glyph_row *row,
     {
       s = glyph_string_containing_background_width (tail);
       x_reached = s->x + s->background_width;
+
+//       if (s->face->underline_type == FACE_UNDER_EXTENDED_LINE)
+      if (s->extends_to_end_of_line_p && s->prev && s->prev->face->underline_type == FACE_UNDER_EXTENDED_LINE)
+
+//       if (head && head->face->underline_type == FACE_UNDER_EXTENDED_LINE)
+//         {
+//           x_reached = last_x;
+//         }
     }
   else
     x_reached = x;

@@ -3581,7 +3581,7 @@ x_draw_glyph_string (struct glyph_string *s)
   /* If S draws into the background of its successors, draw the
      background of the successors first so that S can draw into it.
      This makes S->next use XDrawString instead of XDrawImageString.  */
-  if (s->next && s->right_overhang && !s->for_overlaps)
+  if (false && s->next && s->right_overhang && !s->for_overlaps)
     {
       int width;
       struct glyph_string *next;
@@ -3755,7 +3755,82 @@ x_draw_glyph_string (struct glyph_string *s)
                   XSetForeground (s->display, s->gc, xgcv.foreground);
                 }
             }
+	  else if (s->face->underline_type == FACE_UNDER_EXTENDED_LINE)
+	    {
+              unsigned long thickness, position;
+              int y;
+	      int width = WINDOW_RIGHT_EDGE_X (s->w) - s->x;
+
+              if (s->prev && s->prev->face->underline_p
+		  && s->prev->face->underline_type == FACE_UNDER_EXTENDED_LINE)
+                {
+                  /* We use the same underline style as the previous one.  */
+                  thickness = s->prev->underline_thickness;
+                  position = s->prev->underline_position;
+                }
+	      else
+	        {
+		  struct font *font = font_for_underline_metrics (s);
+
+                  thickness = 1;
+                  position = font->descent + 5;
+		}
+
+              if (s->y + s->height <= s->ybase + position)
+                position = (s->height - 1) - (s->ybase - s->y);
+              if (s->y + s->height < s->ybase + position + thickness)
+                thickness = (s->y + s->height) - (s->ybase + position);
+
+              position = max (position, underline_minimum_offset);
+
+              s->underline_thickness = thickness;
+              s->underline_position = position;
+
+              y = s->ybase + position;
+
+	      x_fill_rectangle(s->f, s->gc,
+			       s->x, y, width, thickness);
+	    }
         }
+
+      if (s->prev && s->prev->face->underline_type == FACE_UNDER_EXTENDED_LINE)
+        {
+              unsigned long thickness, position;
+              int y;
+	      int width = WINDOW_RIGHT_EDGE_X (s->w) - s->x;
+
+              if (s->prev && s->prev->face->underline_p
+		  && s->prev->face->underline_type == FACE_UNDER_EXTENDED_LINE)
+                {
+                  /* We use the same underline style as the previous one.  */
+                  thickness = s->prev->underline_thickness;
+                  position = s->prev->underline_position;
+                }
+	      else
+	        {
+		  struct font *font = font_for_underline_metrics (s);
+
+                  thickness = 1;
+                  position = font->descent + 5;
+		}
+
+              if (s->y + s->height <= s->ybase + position)
+                position = (s->height - 1) - (s->ybase - s->y);
+              if (s->y + s->height < s->ybase + position + thickness)
+                thickness = (s->y + s->height) - (s->ybase + position);
+
+              position = max (position, underline_minimum_offset);
+
+              s->underline_thickness = thickness;
+              s->underline_position = position;
+
+              y = s->ybase + position;
+
+	      x_fill_rectangle(s->f, s->gc,
+			       s->x, y, width, thickness);
+
+	}
+
       /* Draw overline.  */
       if (s->face->overline_p)
 	{
@@ -3808,7 +3883,7 @@ x_draw_glyph_string (struct glyph_string *s)
       if (!relief_drawn_p && s->face->box != FACE_NO_BOX)
 	x_draw_glyph_string_box (s);
 
-      if (s->prev)
+      if (false && s->prev)
 	{
 	  struct glyph_string *prev;
 
@@ -3833,7 +3908,7 @@ x_draw_glyph_string (struct glyph_string *s)
 	      }
 	}
 
-      if (s->next)
+      if (false && s->next)
 	{
 	  struct glyph_string *next;
 

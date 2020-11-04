@@ -2807,7 +2807,7 @@ FRAME 0 means change the face on all frames, and change the default
                 }
 
               else if (EQ (key, QCstyle)
-                       && !(EQ (val, Qline) || EQ (val, Qwave)))
+                       && !(EQ (val, Qline) || EQ (val, Qwave) || EQ (val, Qextended_line)))
                 {
                   valid_p = false;
                   break;
@@ -4840,6 +4840,8 @@ tty_supports_face_attributes_p (struct frame *f,
 	return false;		/* ttys can't use colored underlines */
       else if (EQ (CAR_SAFE (val), QCstyle) && EQ (CAR_SAFE (CDR_SAFE (val)), Qwave))
 	return false;		/* ttys can't use wave underlines */
+      else if (EQ (CAR_SAFE (val), QCstyle) && EQ (CAR_SAFE (CDR_SAFE (val)), Qextended_line))
+	return false;		/* ttys can't use extended underlines */
       else if (face_attr_equal_p (val, def_attrs[LFACE_UNDERLINE_INDEX]))
 	return false;		/* same as default */
       else
@@ -5650,6 +5652,8 @@ realize_x_face (struct face_cache *cache, Lisp_Object attrs[LFACE_VECTOR_SIZE])
                 face->underline_type = FACE_UNDER_LINE;
               else if (EQ (value, Qwave))
                 face->underline_type = FACE_UNDER_WAVE;
+              else if (EQ (value, Qextended_line))
+                face->underline_type = FACE_UNDER_EXTENDED_LINE;
             }
         }
     }
@@ -6405,6 +6409,7 @@ syms_of_xfaces (void)
   DEFSYM (QCstyle, ":style");
   DEFSYM (Qline, "line");
   DEFSYM (Qwave, "wave");
+  DEFSYM (Qextended_line, "extended-line");
   DEFSYM (Qreleased_button, "released-button");
   DEFSYM (Qpressed_button, "pressed-button");
   DEFSYM (Qnormal, "normal");

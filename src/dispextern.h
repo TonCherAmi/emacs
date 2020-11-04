@@ -1257,6 +1257,9 @@ struct glyph_string
   /* The width of the string, including a face extension.  */
   int background_width;
 
+  /* The width of the under extended line.  */
+  int under_extended_line_width;
+
   /* The height of this string.  This is the height of the line this
      string is drawn in, and can be different from the height of the
      font the string is drawn in.  */
@@ -1568,7 +1571,8 @@ enum face_box_type
 enum face_underline_type
 {
   FACE_UNDER_LINE,
-  FACE_UNDER_WAVE
+  FACE_UNDER_WAVE,
+  FACE_UNDER_EXTENDED_LINE
 };
 
 /* Structure describing a realized face.
@@ -1638,7 +1642,7 @@ struct face
   ENUM_BF (face_box_type) box : 2;
 
   /* Style of underlining. */
-  ENUM_BF (face_underline_type) underline_type : 1;
+  ENUM_BF (face_underline_type) underline_type : 2;
 
   /* If `box' above specifies a 3D type, true means use box_color for
      drawing shadows.  */
